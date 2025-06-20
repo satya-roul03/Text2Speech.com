@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Advanced Text to Speech App</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 20px;
+            animation: fadeInBody 1s ease forwards;
+            transition: background 0.5s ease;
+        }
+
+        @keyframes fadeInBody {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .container {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-width: 550px;
+            width: 100%;
+            text-align: center;
+            animation: slideUp 0.8s ease forwards;
+            position: relative;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(40px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 28px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+            resize: none;
+            transition: border 0.3s, box-shadow 0.3s;
+        }
+
+        textarea:focus {
+            border: 1px solid #667eea;
+            box-shadow: 0 0 8px rgba(102,126,234, 0.5);
+            outline: none;
+        }
+
+        select, input[type=range] {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 8px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .controls label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.3s;
+            margin: 8px;
+        }
+
+        button:hover {
+            background: #5563c1;
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #eee;
+            color: #333;
+            border-radius: 20px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            border: none;
+            transition: background 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: #ddd;
+        }
+
+        body.light-mode {
+            background: linear-gradient(135deg, #fdfbfb, #ebedee);
+        }
+
+        body.light-mode .container {
+            background: #fff;
+            color: #333;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #1e1e1e, #121212);
+        }
+
+        body.dark-mode .container {
+            background: #222;
+            color: #eee;
+        }
+
+        body.dark-mode textarea,
+        body.dark-mode select,
+        body.dark-mode input[type=range] {
+            background: #333;
+            color: #eee;
+            border-color: #555;
+        }
+
+        body.dark-mode button {
+            background: #444;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: url('https://svgshare.com/i/yDb.svg') no-repeat center center / cover;
+            opacity: 0.05;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px 25px;
+            }
+
+            textarea {
+                height: 120px;
+            }
+        }
+    </style>
+</head>
+<body class="light-mode">
+
+    <div class="container">
+        <h1>🗣️ Advanced Text to Speech</h1>
+        <textarea id="text" placeholder="Type your text here..."></textarea>
+
+        <div class="controls">
+            <label for="voice">Voice</label>
+            <select id="voice"></select>
+
+            <label for="rate">Rate: <span id="rate-value">1</span></label>
+            <input type="range" id="rate" min="0.5" max="2" value="1" step="0.1">
+
+            <label for="pitch">Pitch: <span id="pitch-value">1</span></label>
+            <input type="range" id="pitch" min="0" max="2" value="1" step="0.1">
+        </div>
+
+        <button onclick="speak()">🔊 Speak</button>
+        <button onclick="clearText()">🧹 Clear</button>
+        <button class="theme-toggle" onclick="toggleTheme()">🌙 Toggle Mode</button>
+    </div>
+
+    <script>
+        const textInput = document.getElementById('text');
+        const voiceSelect = document.getElementById('voice');
+        const rate = document.getElementById('rate');
+        const rateValue = document.getElementById('rate-value');
+        const pitch = document.getElementById('pitch');
+        const pitchValue = document.getElementById('pitch-value');
+
+        function populateVoices() {
+            const voices = speechSynthesis.getVoices();
+            voiceSelect.innerHTML = '';
+            voices.forEach(voice => {
+                const option = document.createElement('option');
+                option.value = voice.name;
+                option.textContent = `${voice.name} (${voice.lang})`;
+                voiceSelect.appendChild(option);
+            });
+
+            // Load saved voice if exists
+            const savedVoice = localStorage.getItem('voice');
+            if (savedVoice) {
+                voiceSelect.value = savedVoice;
+            }
+        }
+
+        speechSynthesis.onvoiceschanged = populateVoices;
+        populateVoices();
+
+        function speak() {
+            const text = textInput.value;
+            if (text.trim() === '') {
+                alert('Please enter some text!');
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voices = speechSynthesis.getVoices();
+            const selectedVoice = voiceSelect.value;
+            utterance.voice = voices.find(voice => voice.name === selectedVoice);
+            utterance.rate = rate.value;
+            utterance.pitch = pitch.value;
+
+            // Save current settings
+            localStorage.setItem('voice', voiceSelect.value);
+            localStorage.setItem('rate', rate.value);
+            localStorage.setItem('pitch', pitch.value);
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function clearText() {
+            textInput.value = '';
+        }
+
+        rate.addEventListener('input', () => {
+            rateValue.textContent = rate.value;
+        });
+
+        pitch.addEventListener('input', () => {
+            pitchValue.textContent = pitch.value;
+        });
+
+        // Load saved settings on page load
+        window.addEventListener('load', () => {
+            const savedRate = localStorage.getItem('rate');
+            const savedPitch = localStorage.getItem('pitch');
+
+            if (savedRate) {
+                rate.value = savedRate;
+                rateValue.textContent = savedRate;
+            }
+
+            if (savedPitch) {
+                pitch.value = savedPitch;
+                pitchValue.textContent = savedPitch;
+            }
+        });
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            document.body.classList.toggle('light-mode');
+        }
+    </script>
+
+</body>
+</html>
